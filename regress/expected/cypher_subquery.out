@@ -632,9 +632,10 @@ SELECT * FROM cypher('subquery', $$ MATCH (a:person)-[]->(b)
 									RETURN a $$) AS (result agtype);
                                              result                                              
 -------------------------------------------------------------------------------------------------
+ {"id": 844424930131977, "label": "person", "properties": {"age": 8, "name": "Charlie"}}::vertex
  {"id": 844424930131975, "label": "person", "properties": {"age": 6, "name": "Calvin"}}::vertex
- {"id": 844424930131976, "label": "person", "properties": {"age": 8, "name": "Charlie"}}::vertex
-(2 rows)
+ {"id": 844424930131977, "label": "person", "properties": {"age": 8, "name": "Charlie"}}::vertex
+(3 rows)
 
 --coalesce, nested in return
 SELECT * FROM cypher('subquery', $$ MATCH (a:person)-[]->(b)
