@@ -21,6 +21,12 @@ INCLUDEDIR_SERVER := ${shell $(PG_CONFIG) --includedir-server}
 USE_PGXS = 1
 include $(PGXS)
 
+# Strip C-only warning flags that cause "valid for C/ObjC but not for C++" when
+# the parent build passes CFLAGS through to CXXFLAGS (e.g. Yugabyte's pgxs).
+# Filter out GCC 12+ specific flags that aren't recognized by older GCC versions.
+CXXFLAGS_FILTERED := $(filter-out -Wimplicit-function-declaration -Wint-conversion -Wno-incompatible-pointer-types -Wno-use-after-free -Wno-stringop-overread,$(CXXFLAGS))
+override COMPILE.cc = $(CXX) $(CXXFLAGS_FILTERED) $(CPPFLAGS) -c
+
 # All the below stuff is vendored in from Postgres its Makefile.global. It's
 # normally only enabled when --enabled-depend is provided to Postgres its
 # ./configure script. This enables it even if that is not the case, so that

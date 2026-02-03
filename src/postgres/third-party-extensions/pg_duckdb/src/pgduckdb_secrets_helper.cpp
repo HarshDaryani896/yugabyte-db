@@ -80,7 +80,7 @@ MakeDuckDBCreateSecretQuery(const char *server_name, const char *type, List *ser
 
 List *
 ListDuckDBCreateSecretQueries() {
-	MemoryContext entry_ctx = CurrentMemoryContext;
+	MemoryContext entry_ctx = YbCurrentMemoryContext;
 	SPI_connect();
 
 	// List all SERVER created with 'duckdb' FDW

@@ -15,7 +15,7 @@ DUCKDB_GEN ?= ninja
 # used to know what version of extensions to download
 DUCKDB_VERSION = v1.3.2
 # duckdb build tweaks
-DUCKDB_CMAKE_VARS = -DCXX_EXTRA=-fvisibility=default -DBUILD_SHELL=0 -DBUILD_PYTHON=0 -DBUILD_UNITTESTS=0
+DUCKDB_CMAKE_VARS = -DCXX_EXTRA='-fvisibility=default -USNAPPY -ULZ4' -DBUILD_SHELL=0 -DBUILD_PYTHON=0 -DBUILD_UNITTESTS=0
 # set to 1 to disable asserts in DuckDB. This is particularly useful in combinition with MotherDuck.
 # When asserts are enabled the released motherduck extension will fail some of
 # those asserts. By disabling asserts it's possible to run a debug build of
@@ -24,6 +24,13 @@ DUCKDB_DISABLE_ASSERTIONS ?= 0
 
 DUCKDB_BUILD_CXX_FLAGS=
 DUCKDB_BUILD_TYPE=
+
+ifneq (,$(filter clang%,$(YB_COMPILER_TYPE)))
+	IS_CLANG = 1
+else
+	IS_CLANG = 0
+endif
+
 ifeq ($(DUCKDB_BUILD), Debug)
 	DUCKDB_BUILD_CXX_FLAGS = -g -O0 -D_GLIBCXX_ASSERTIONS
 	DUCKDB_BUILD_TYPE = debug
@@ -34,8 +41,14 @@ else ifeq ($(DUCKDB_BUILD), ReleaseStatic)
 	DUCKDB_MAKE_TARGET = bundle-library
 else
 	DUCKDB_BUILD_CXX_FLAGS =
-	DUCKDB_BUILD_TYPE = release
-	DUCKDB_MAKE_TARGET = release
+	# Use release-clang-libcxx if compiler is Clang, otherwise use release
+	ifeq ($(IS_CLANG), 1)
+		DUCKDB_BUILD_TYPE = release-clang-libcxx
+		DUCKDB_MAKE_TARGET = release-clang-libcxx
+	else
+		DUCKDB_BUILD_TYPE = release
+		DUCKDB_MAKE_TARGET = release
+	endif
 endif
 
 DUCKDB_BUILD_DIR = third_party/duckdb/build/$(DUCKDB_BUILD_TYPE)
@@ -58,7 +71,10 @@ else
 	ERROR_ON_WARNING =
 endif
 
-COMPILER_FLAGS=-Wno-sign-compare -Wshadow -Wswitch -Wunused-parameter -Wunreachable-code -Wno-unknown-pragmas -Wall -Wextra ${ERROR_ON_WARNING}
+COMPILER_FLAGS = -Wall -Wextra \
+                 -Wshadow -Wunused-parameter -Wno-implicit-fallthrough \
+                 -Wno-unknown-pragmas -Wunreachable-code -Wno-incompatible-pointer-types \
+                 ${ERROR_ON_WARNING}
 
 override PG_CPPFLAGS += -Iinclude -isystem third_party/duckdb/src/include -isystem third_party/duckdb/third_party/re2 -isystem $(INCLUDEDIR_SERVER) ${COMPILER_FLAGS}
 override PG_CXXFLAGS += -std=c++17 ${DUCKDB_BUILD_CXX_FLAGS} ${COMPILER_FLAGS} -Wno-register -Weffc++
@@ -121,6 +137,7 @@ $(FULL_DUCKDB_LIB): .git/modules/third_party/duckdb/HEAD third_party/pg_duckdb_e
 	DISABLE_SANITIZER=1 \
 	DISABLE_ASSERTIONS=$(DUCKDB_DISABLE_ASSERTIONS) \
 	EXTENSION_CONFIGS="../pg_duckdb_extensions.cmake" \
+	CXXFLAGS="$(CXXFLAGS_FILTERED)" \
 	$(MAKE) -C third_party/duckdb \
 	$(DUCKDB_MAKE_TARGET)
 

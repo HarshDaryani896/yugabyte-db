@@ -1,4 +1,4 @@
-LOAD 'pg_duckdb';
+-- LOAD 'pg_duckdb';  -- Commented out: pg_duckdb must be loaded via shared_preload_libraries instead
 
 -- We create a duckdb schema to store most of our things. We explicitely
 -- don't use CREATE IF EXISTS or the schema key in the control file, so we know

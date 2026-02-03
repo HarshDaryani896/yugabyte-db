@@ -1865,12 +1865,12 @@ pg_get_statisticsobjdef_expressions(PG_FUNCTION_ARGS)
 								  PointerGetDatum(cstring_to_text(str)),
 								  false,
 								  TEXTOID,
-								  CurrentMemoryContext);
+								  YbCurrentMemoryContext);
 	}
 
 	ReleaseSysCache(statexttup);
 
-	PG_RETURN_DATUM(makeArrayResult(astate, CurrentMemoryContext));
+	PG_RETURN_DATUM(makeArrayResult(astate, YbCurrentMemoryContext));
 }
 
 /*
@@ -3868,7 +3868,7 @@ set_rtable_names(deparse_namespace *dpns, List *parent_namespaces,
 	 */
 	hash_ctl.keysize = NAMEDATALEN;
 	hash_ctl.entrysize = sizeof(NameHashEntry);
-	hash_ctl.hcxt = CurrentMemoryContext;
+	hash_ctl.hcxt = YbCurrentMemoryContext;
 	names_hash = hash_create("set_rtable_names names",
 							 list_length(dpns->rtable),
 							 &hash_ctl,

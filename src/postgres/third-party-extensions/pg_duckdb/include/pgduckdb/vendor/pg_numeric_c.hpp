@@ -571,7 +571,7 @@ make_result_opt_error(const NumericVar *var, bool *have_error)
 		result->choice.n_long.n_weight = weight;
 	}
 
-	Assert(NUMERIC_NDIGITS(result) == n);
+	Assert(NUMERIC_NDIGITS(result) == static_cast<size_t>(n));
 	if (n > 0)
 		memcpy(NUMERIC_DIGITS(result), digits, n * sizeof(NumericDigit));
 

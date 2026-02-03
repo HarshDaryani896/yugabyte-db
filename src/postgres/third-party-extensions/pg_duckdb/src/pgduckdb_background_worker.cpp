@@ -25,6 +25,10 @@
 #include <sys/file.h>
 #include <fcntl.h>
 
+#ifndef atomic_bool
+    #define atomic_bool bool
+#endif
+
 extern "C" {
 #include "postgres.h"
 #include "access/xact.h"
@@ -725,7 +729,7 @@ SPI_commit_that_works_in_bgworker() {
  */
 static bool
 SPI_run_utility_command(const char *query) {
-	MemoryContext old_context = CurrentMemoryContext;
+	MemoryContext old_context = YbCurrentMemoryContext;
 	int ret;
 	/*
 	 * We create a subtransaction to be able to cleanly roll back in case of

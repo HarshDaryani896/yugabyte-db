@@ -551,7 +551,7 @@ DuckdbHandleDDLPre(PlannedStmt *pstmt, const char *query_string) {
 			return false;
 		}
 
-		MemoryContext oldcontext = CurrentMemoryContext;
+		MemoryContext oldcontext = YbCurrentMemoryContext;
 
 		/* NOTE: The below code is mostly copied from ExecCreateTableAs */
 		Query *query = (Query *)copyObjectImpl(original_query);

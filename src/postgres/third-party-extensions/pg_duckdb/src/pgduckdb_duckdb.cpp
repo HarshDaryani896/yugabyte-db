@@ -221,7 +221,15 @@ int64
 GetSeqLastValue(const char *seq_name) {
 	Oid duckdb_namespace = get_namespace_oid("duckdb", false);
 	Oid table_seq_oid = get_relname_relid(seq_name, duckdb_namespace);
-	return PostgresFunctionGuard(DirectFunctionCall1Coll, pg_sequence_last_value, InvalidOid, table_seq_oid);
+	
+	Datum result = PostgresFunctionGuard(DirectFunctionCall1Coll, pg_sequence_last_value, InvalidOid, table_seq_oid);
+		
+	// If the function returned NULL (sequence hasn't been used yet), return 0
+	if (result == (Datum) 0 || result == (Datum) NULL) {
+		return 0;
+	}
+		
+	return DatumGetInt64(result);
 }
 
 void
