@@ -5492,7 +5492,37 @@ static Node *make_edge_expr(cypher_parsestate *cpstate,
                              COERCE_EXPLICIT_CALL);
     func_expr->location = -1;
 
-    return (Node *)func_expr;
+    /*
+     * YB: when the edge comes from an OPTIONAL MATCH or other nullable
+     * context, id can be NULL. _agtype_build_edge() does not accept NULL
+     * graphid, so wrap in CASE WHEN id IS NOT NULL THEN ... ELSE NULL END.
+     */
+    {
+        NullTest   *nulltest;
+        CaseWhen   *casewhen;
+        CaseExpr   *caseexpr;
+
+        nulltest = makeNode(NullTest);
+        nulltest->arg = (Expr *) id;
+        nulltest->nulltesttype = IS_NOT_NULL;
+        nulltest->argisrow = false;
+        nulltest->location = -1;
+
+        casewhen = makeNode(CaseWhen);
+        casewhen->expr = (Expr *) nulltest;
+        casewhen->result = (Expr *) func_expr;
+        casewhen->location = -1;
+
+        caseexpr = makeNode(CaseExpr);
+        caseexpr->casetype = AGTYPEOID;
+        caseexpr->casecollid = InvalidOid;
+        caseexpr->arg = NULL;
+        caseexpr->args = list_make1(casewhen);
+        caseexpr->defresult = (Expr *) makeNullConst(AGTYPEOID, -1, InvalidOid);
+        caseexpr->location = -1;
+
+        return (Node *) caseexpr;
+    }
 }
 static Node *make_vertex_expr(cypher_parsestate *cpstate,
                               ParseNamespaceItem *pnsi)
@@ -5537,7 +5567,37 @@ static Node *make_vertex_expr(cypher_parsestate *cpstate,
                              COERCE_EXPLICIT_CALL);
     func_expr->location = -1;
 
-    return (Node *)func_expr;
+    /*
+     * YB: when the vertex comes from an OPTIONAL MATCH or other nullable
+     * context, id can be NULL. _agtype_build_vertex() does not accept NULL
+     * graphid, so wrap in CASE WHEN id IS NOT NULL THEN ... ELSE NULL END.
+     */
+    {
+        NullTest   *nulltest;
+        CaseWhen   *casewhen;
+        CaseExpr   *caseexpr;
+
+        nulltest = makeNode(NullTest);
+        nulltest->arg = (Expr *) id;
+        nulltest->nulltesttype = IS_NOT_NULL;
+        nulltest->argisrow = false;
+        nulltest->location = -1;
+
+        casewhen = makeNode(CaseWhen);
+        casewhen->expr = (Expr *) nulltest;
+        casewhen->result = (Expr *) func_expr;
+        casewhen->location = -1;
+
+        caseexpr = makeNode(CaseExpr);
+        caseexpr->casetype = AGTYPEOID;
+        caseexpr->casecollid = InvalidOid;
+        caseexpr->arg = NULL;
+        caseexpr->args = list_make1(casewhen);
+        caseexpr->defresult = (Expr *) makeNullConst(AGTYPEOID, -1, InvalidOid);
+        caseexpr->location = -1;
+
+        return (Node *) caseexpr;
+    }
 }
 
 static Query *transform_cypher_create(cypher_parsestate *cpstate,

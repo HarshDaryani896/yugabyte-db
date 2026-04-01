@@ -451,6 +451,9 @@ static void create_table_for_label(char *graph_name, char *label_name,
     }
     else if (label_type == LABEL_TYPE_EDGE)
     {
+        /* YB: Only create id index for edges that have parents */
+        if (list_length(parents) != 0)
+            create_index_on_column(schema_name, rel_name, "id", true);
         create_index_on_column(schema_name, rel_name, "start_id", false);
         create_index_on_column(schema_name, rel_name, "end_id", false);
     }
@@ -470,14 +473,14 @@ static void create_index_on_column(char *schema_name,
     index_col->name = colname;
     index_col->expr = NULL;
     index_col->indexcolname = NULL;
-    index_col->collation = InvalidOid;
+    index_col->collation = NIL; /* YB: NIL instead of InvalidOid */
     index_col->opclass = list_make1(makeString("graphid_ops"));
     index_col->opclassopts = NIL;
     index_col->ordering = SORTBY_DEFAULT;
     index_col->nulls_ordering = SORTBY_NULLS_DEFAULT;
 
     index_stmt->relation = makeRangeVar(schema_name, rel_name, -1);
-    index_stmt->accessMethod = "btree";
+    index_stmt->accessMethod = "lsm"; /* YB: Use lsm instead of btree */
     index_stmt->tableSpace = NULL;
     index_stmt->indexParams = list_make1(index_col);
     index_stmt->options = NIL;
