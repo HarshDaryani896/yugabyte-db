@@ -282,7 +282,8 @@ void insert_edge_simple(Oid graph_oid, char *label_name, graphid edge_id,
          * catalog. However, it is used here for convenience.
          */
         CatalogIndexState indstate = CatalogOpenIndexes(label_relation);
-        CatalogTupleInsertWithInfo(label_relation, tuple, indstate);
+        /* YB: Extra param for YB-specific CatalogTupleInsertWithInfo */
+        CatalogTupleInsertWithInfo(label_relation, tuple, indstate, false);
         CatalogCloseIndexes(indstate);
     }
     else
@@ -339,7 +340,8 @@ void insert_vertex_simple(Oid graph_oid, char *label_name, graphid vertex_id,
          * catalog. However, it is used here for convenience.
          */
         CatalogIndexState indstate = CatalogOpenIndexes(label_relation);
-        CatalogTupleInsertWithInfo(label_relation, tuple, indstate);
+        /* YB: Extra param for YB-specific CatalogTupleInsertWithInfo */
+        CatalogTupleInsertWithInfo(label_relation, tuple, indstate, false);
         CatalogCloseIndexes(indstate);
     }
     else
@@ -371,7 +373,7 @@ void insert_batch(batch_insert_state *batch_state)
             result = ExecInsertIndexTuples(batch_state->resultRelInfo,
                                            batch_state->slots[i],
                                            batch_state->estate, false,
-                                           true, NULL, NIL, false);
+                                           true, NULL, NIL); /* YB: omit extra param */
 
             /* Check if the unique constraint is violated */
             if (list_length(result) != 0)
