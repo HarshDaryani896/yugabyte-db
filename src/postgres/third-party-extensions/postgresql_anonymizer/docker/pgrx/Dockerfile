@@ -61,7 +61,7 @@ ENV PATH="/home/postgres/.cargo/bin/:${PATH}"
 
 FROM rhel8_rust AS rhel8_pgrx
 
-ARG PGRX_VERSION=0.17.0
+ARG PGRX_VERSION=0.18.1
 
 RUN rustup self update \
  && rustup component add clippy llvm-tools-preview \

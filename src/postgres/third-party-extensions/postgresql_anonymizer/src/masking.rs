@@ -347,6 +347,11 @@ fn default_for_att(
                     context,
                     false,
                     false,
+                    // YB: YugabyteDB's fork adds yb_pretty and yb_maskconstants
+                    // params to deparse_expression; false/false matches upstream
+                    // (non-pretty, un-masked) deparse behavior.
+                    false,
+                    false,
                 ) as *mut c_char
             };
 

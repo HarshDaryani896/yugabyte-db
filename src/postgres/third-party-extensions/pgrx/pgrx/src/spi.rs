@@ -9,12 +9,24 @@
 //LICENSE Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 //! Safe access to Postgres' *Server Programming Interface* (SPI).
 
+use crate::callbacks::{register_xact_callback, PgXactCallbackEvent};
 use crate::datum::{DatumWithOid, FromDatum, IntoDatum, Json, TryFromDatumError};
 use crate::pg_sys;
+use core::cell::Cell;
 use core::fmt::Formatter;
 use std::ffi::{CStr, CString};
 use std::fmt::Debug;
 use std::mem;
+
+thread_local! {
+    /// Whether pgrx has executed a potentially-mutating statement in the current transaction.
+    ///
+    /// Backing store for [`Spi::is_xact_still_immutable()`] / [`Spi::mark_mutable()`].  Cleared at
+    /// transaction end by a callback registered in `mark_mutable()`.
+    ///
+    /// A Postgres backend is a single-threaded process, so this is effectively backend-global.
+    static MUTATED: Cell<bool> = const { Cell::new(false) };
+}
 
 mod client;
 mod cursor;
@@ -210,6 +222,11 @@ impl Spi {
     /// as `read_only = true` until the first mutable statement (DDL or DML).  From that point
     /// forward **all** statements must be executed as `read_only = false`.
     fn is_xact_still_immutable() -> bool {
+        // Fast path: pgrx itself has already run a mutating statement in this transaction.
+        if MUTATED.with(Cell::get) {
+            return false;
+        }
+
         unsafe {
             // SAFETY:  `pg_sys::GetCurrentTransactionIdIfAny()` will always return a valid
             // TransactionId value, even if it's `InvalidTransactionId`.
@@ -220,18 +237,50 @@ impl Spi {
         }
     }
 
-    /// Let Postgres know that we intend to perform some kind of mutating operation in this transaction.
+    /// Let pgrx know that we intend to perform some kind of mutating operation in this transaction.
     ///
     /// From this point forward, within the current transaction, [`Spi::is_xact_still_immutable()`] will
     /// return `false`.
+    ///
+    /// This records the fact in pgrx's own [`MUTATED`] flag rather than by forcing Postgres to
+    /// assign a TransactionId.  Both approaches give `is_xact_still_immutable()` the same answer,
+    /// but only this one is free of side effects.
+    ///
+    /// The previous implementation called `pg_sys::GetCurrentTransactionId()`, relying on the fact
+    /// that on stock Postgres a mutating statement is about to assign an xid anyway, making the
+    /// call effectively free.  That assumption does not hold everywhere.  Postgres-compatible
+    /// engines that manage transactions below the SQL layer (YugabyteDB, for one) assign no xid for
+    /// ordinary DML, so the call did not observe an assignment -- it *caused* one that nothing else
+    /// would have made, writing state such an engine may not expect or clean up.
+    ///
+    /// Note also that `update()` calls this before inspecting the statement, so it fires for
+    /// read-only statements routed through [`SpiClient::update`] (which includes [`Spi::get_one`]
+    /// and [`Spi::run`]) as well.  Forcing an assignment for those was never necessary.
     fn mark_mutable() {
-        unsafe {
-            // SAFETY:  `pg_sys::GetCurrentTransactionId()` will return a valid, possibly newly-created
-            // TransactionId or it'll raise an ERROR trying.
+        // Already marked for this transaction -- nothing to do, and in particular don't register
+        // another reset callback.
+        if MUTATED.with(Cell::get) {
+            return;
+        }
 
-            // The act of marking this transaction mutable is simply asking Postgres for the current
-            // TransactionId in a way where it will assign one if necessary
-            let _ = pg_sys::GetCurrentTransactionId();
+        MUTATED.with(|mutated| mutated.set(true));
+
+        // The flag is transaction-scoped, so arrange for it to be cleared when this transaction
+        // ends.  pgrx's xact callbacks are themselves per-transaction, so this registration does
+        // not accumulate across transactions.
+        //
+        // Deliberately *not* reset on subtransaction abort: an xid survives `ROLLBACK TO`, so the
+        // behaviour being replaced is sticky for the life of the transaction, and this matches it.
+        //
+        // Should a reset ever be missed, the flag simply stays set and pgrx is over-conservative
+        // (`read_only = false` when it could have been `true`) -- never the reverse.
+        for event in [
+            PgXactCallbackEvent::Commit,
+            PgXactCallbackEvent::Abort,
+            PgXactCallbackEvent::ParallelCommit,
+            PgXactCallbackEvent::ParallelAbort,
+        ] {
+            register_xact_callback(event, || MUTATED.with(|mutated| mutated.set(false)));
         }
     }
 

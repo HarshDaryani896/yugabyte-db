@@ -26,14 +26,16 @@ fastrand = "2.3.0"
 image = "0.25.5"
 md-5 = "0.10.6"
 paste = "1.0"
-pgrx = "0.18.1"
+# YB: Using local clone of pgrx.
+pgrx = {path = "../pgrx/pgrx"}
 rand = "0.8.5"
 regex = "1.10.2"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.148"
 
 [dev-dependencies]
-pgrx-tests = "0.18.1"
+# YB: Using local clone of pgrx.
+pgrx-tests = {path = "../pgrx/pgrx-tests"}
 
 [profile.dev]
 panic = "unwind"

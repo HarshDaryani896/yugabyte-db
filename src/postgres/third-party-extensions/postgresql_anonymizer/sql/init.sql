@@ -46,7 +46,7 @@ BEGIN
   END IF;
 
   -- clustering the table for better performance
-  EXECUTE 'CLUSTER ' || dest_table;
+  -- YB(#1124): CLUSTER unsupported on YugabyteDB, no-op on DocDB storage: EXECUTE 'CLUSTER ' || dest_table;
 
   RETURN TRUE;
 

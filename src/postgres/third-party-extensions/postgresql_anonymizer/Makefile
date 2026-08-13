@@ -141,22 +141,101 @@ EXTRA_CLEAN?=target
 ## BUILD
 ##
 
-all: extension
+# YB: toolchain wiring so the Rust build links against YB's PG and thirdparty libs
+# (mirrors pg_parquet/Makefile).
+CARGO_BIN ?= $(shell command -v cargo || echo $(HOME)/.cargo/bin/cargo)
+CARGO_DIR := $(dir $(CARGO_BIN))
+YB_ANON_CFLAGS := -Wno-error -Wno-implicit-fallthrough -Wno-unused-but-set-variable -Wno-missing-include-dirs
+YB_UNAME_S := $(shell uname -s)
+ifeq ($(YB_UNAME_S),Darwin)
+	YB_SDKROOT := $(shell xcrun --show-sdk-path)
+endif
+ifneq (,$(filter clang%,$(YB_COMPILER_TYPE)))
+	ifneq ($(origin YB_LLVM_TOOLCHAIN_DIR),undefined)
+		CC := $(YB_LLVM_TOOLCHAIN_DIR)/bin/clang
+		CXX := $(YB_LLVM_TOOLCHAIN_DIR)/bin/clang++
+		RUSTFLAGS := -C link-arg=-fuse-ld=lld -C linker=$(YB_LLVM_TOOLCHAIN_DIR)/bin/clang
+		LIBCLANG_PATH := $(YB_LLVM_TOOLCHAIN_DIR)/lib
+		ifeq ($(YB_UNAME_S),Darwin)
+			RUSTFLAGS += -C link-arg=-isysroot -C link-arg=$(YB_SDKROOT)
+			RUSTFLAGS += -C link-arg=-Wl,-undefined,dynamic_lookup
+			YB_ANON_CFLAGS += -isysroot $(YB_SDKROOT)
+		else
+			RUSTFLAGS += -L$(YB_THIRDPARTY_DIR)/installed/common/lib
+		endif
+		ifeq ($(YB_BUILD_TYPE),tsan)
+			RUSTFLAGS += -C link-arg=-fsanitize=thread
+			RUSTFLAGS += -C link-arg=$(shell $(YB_LLVM_TOOLCHAIN_DIR)/bin/clang++ -print-file-name=libclang_rt.tsan.so)
+		endif
+		ifeq ($(YB_BUILD_TYPE),asan)
+			RUSTFLAGS += -C link-arg=-fsanitize=address
+			RUSTFLAGS += -C link-arg=$(shell $(YB_LLVM_TOOLCHAIN_DIR)/bin/clang++ -print-file-name=libclang_rt.asan.so)
+		endif
+	endif
+else
+	RUSTFLAGS := -L$(YB_THIRDPARTY_DIR)/installed/common/lib
+	LIBCLANG_PATH := $(if $(YB_LLVM_TOOLCHAIN_DIR),$(YB_LLVM_TOOLCHAIN_DIR)/lib)
+	ifneq ($(origin YB_GCC_PREFIX),undefined)
+		CC := $(YB_GCC_PREFIX)/bin/gcc$(YB_GCC_SUFFIX)
+		CXX := $(YB_GCC_PREFIX)/bin/g++$(YB_GCC_SUFFIX)
+		RUSTFLAGS += -C linker=$(CC)
+	else
+		CC := gcc
+		CXX := g++
+	endif
+endif
 
-extension:
-	$(PGRX) package --pg-config $(PG_CONFIG)
-	mkdir -p $(TARGET_SHAREDIR)/extension/anon/
-	install data/*.csv $(TARGET_SHAREDIR)/extension/anon/
-	install data/en_US/fake/*.csv $(TARGET_SHAREDIR)/extension/anon/
+# YB: `all` stays the first (default) target so `make` is a no-op build; the real
+# work happens in `install` via the locally-built cargo-pgrx (like pg_parquet).
+all:
+
+extension: install
+
+cargo-exists:
+	$(CARGO_BIN) --version > /dev/null || (echo "cargo is not available. Please install cargo." && exit 1)
+
+# YB: build the vendored cargo-pgrx and configure pgrx (init once).
+yb-cargo-pgrx-exists: cargo-exists
+	export PATH="$(CARGO_DIR):$$PATH" && \
+	cd ../pgrx && \
+	env -u CFLAGS -u CXXFLAGS -u LDFLAGS -u LDFLAGS_EX -u CPPFLAGS -u PKG_CONFIG_PATH \
+		$(if $(CC),CC=$(CC),) \
+		$(if $(CXX),CXX=$(CXX),) \
+		$(if $(RUSTFLAGS),RUSTFLAGS="$(RUSTFLAGS)",) \
+		$(if $(LIBCLANG_PATH),LIBCLANG_PATH=$(LIBCLANG_PATH),) \
+		CFLAGS="$(YB_ANON_CFLAGS)" \
+		CARGO_INCREMENTAL=1 \
+		cargo build --package cargo-pgrx --release && \
+	mkdir -p $$YB_BUILD_ROOT/.pgrx/data-15 && \
+	if [ ! -f "$(YB_BUILD_ROOT)/.pgrx/config.toml" ] || ! grep -q "^pg15\s*=\s*\"$$PG_CONFIG\"" "$(YB_BUILD_ROOT)/.pgrx/config.toml" >/dev/null 2>&1; then \
+		LD_LIBRARY_PATH="$(YB_THIRDPARTY_DIR)/installed/common/lib:$$LD_LIBRARY_PATH" \
+		PGRX_HOME=$(YB_BUILD_ROOT)/.pgrx \
+		target/release/cargo-pgrx pgrx init --pg15 $(PG_CONFIG); \
+	fi && \
+	cd ../postgresql_anonymizer
 
 
 ##
 ## INSTALL
 ##
 
-install:
-	cp -r $(TARGET_SHAREDIR)/extension/* $(PG_SHAREDIR)/extension/
-	install $(TARGET_PKGLIBDIR)/$(LIB) $(PG_PKGLIBDIR)
+# YB: install the extension with the locally-built cargo-pgrx, then copy the
+# anonymizer data CSVs (which cargo-pgrx does not handle).
+install: yb-cargo-pgrx-exists
+	export PATH="$(CARGO_DIR):$$PATH" && \
+	env -u CFLAGS -u CXXFLAGS -u LDFLAGS -u LDFLAGS_EX -u CPPFLAGS -u PKG_CONFIG_PATH \
+		$(if $(CC),CC=$(CC),) \
+		$(if $(CXX),CXX=$(CXX),) \
+		$(if $(RUSTFLAGS),RUSTFLAGS="$(RUSTFLAGS)",) \
+		$(if $(LIBCLANG_PATH),LIBCLANG_PATH=$(LIBCLANG_PATH),) \
+		CFLAGS="$(YB_ANON_CFLAGS)" \
+		LD_LIBRARY_PATH="$(YB_THIRDPARTY_DIR)/installed/common/lib:$$LD_LIBRARY_PATH" \
+		PGRX_HOME=$(YB_BUILD_ROOT)/.pgrx \
+		CARGO_INCREMENTAL=1 \
+		../pgrx/target/release/cargo-pgrx pgrx install --release -F pg15 -c $(PG_CONFIG)
+	mkdir -p $(PG_SHAREDIR)/extension/anon/
+	install data/*.csv $(PG_SHAREDIR)/extension/anon/
+	install data/en_US/fake/*.csv $(PG_SHAREDIR)/extension/anon/
 
 ##
 ## INSTALLCHECK
@@ -316,7 +395,7 @@ ifneq ($(DOCKER_PG_MAJOR_VERSION),)
 DOCKER_BUILD_ARG += --build-arg DOCKER_PG_MAJOR_VERSION=$(DOCKER_PG_MAJOR_VERSION)
 endif
 
-PGRX_VERSION?=0.17.0
+PGRX_VERSION?=0.18.1
 PGRX_TAG?=pgrx-$(PGRX_VERSION)
 PGRX_IMAGE?=registry.gitlab.com/dalibo/postgresql_anonymizer:$(PGRX_TAG)
 PGRX_BUILD_ARGS:=--build-arg PGRX_VERSION=$(PGRX_VERSION)

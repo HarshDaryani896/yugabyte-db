@@ -386,8 +386,7 @@ CREATE TABLE anon.identifiers_category(
   anon_function TEXT
 );
 
-ALTER TABLE anon.identifiers_category
-  CLUSTER ON identifiers_category_name_key;
+-- YB(#1124): CLUSTER unsupported on YugabyteDB, no-op on DocDB storage: ALTER TABLE anon.identifiers_category CLUSTER ON identifiers_category_name_key;
 GRANT SELECT ON TABLE anon.identifiers_category TO PUBLIC;
 COMMENT ON TABLE anon.identifiers_category
 IS 'Generic identifiers categories based the HIPAA classification';
@@ -402,8 +401,7 @@ CREATE TABLE anon.identifier(
     REFERENCES anon.identifiers_category(name)
 );
 
-ALTER TABLE anon.identifier
-  CLUSTER ON identifier_pkey;
+-- YB(#1124): CLUSTER unsupported on YugabyteDB, no-op on DocDB storage: ALTER TABLE anon.identifier CLUSTER ON identifier_pkey;
 GRANT SELECT ON TABLE anon.identifier TO PUBLIC;
 COMMENT ON TABLE anon.identifier
 IS 'Dictionnary of common identifiers field names';

@@ -11,7 +11,7 @@ CREATE TABLE anon.address (
   val TEXT
 );
 
-ALTER TABLE anon.address CLUSTER ON address_pkey;
+-- YB(#1124): CLUSTER unsupported on YugabyteDB, no-op on DocDB storage: ALTER TABLE anon.address CLUSTER ON address_pkey;
 GRANT SELECT ON TABLE anon.address TO PUBLIC;
 GRANT SELECT ON SEQUENCE anon.address_oid_seq TO PUBLIC;
 
@@ -24,7 +24,7 @@ CREATE TABLE anon.city (
   val TEXT
 );
 
-ALTER TABLE anon.city CLUSTER ON city_pkey;
+-- YB(#1124): CLUSTER unsupported on YugabyteDB, no-op on DocDB storage: ALTER TABLE anon.city CLUSTER ON city_pkey;
 GRANT SELECT ON TABLE anon.city TO PUBLIC;
 GRANT SELECT ON SEQUENCE anon.city_oid_seq TO PUBLIC;
 
@@ -37,7 +37,7 @@ CREATE TABLE anon.company (
   val TEXT
 );
 
-ALTER TABLE anon.company CLUSTER ON company_pkey;
+-- YB(#1124): CLUSTER unsupported on YugabyteDB, no-op on DocDB storage: ALTER TABLE anon.company CLUSTER ON company_pkey;
 GRANT SELECT ON TABLE anon.company TO PUBLIC;
 GRANT SELECT ON SEQUENCE anon.company_oid_seq TO PUBLIC;
 
@@ -50,7 +50,7 @@ CREATE TABLE anon.country (
   val TEXT
 );
 
-ALTER TABLE anon.country CLUSTER ON country_pkey;
+-- YB(#1124): CLUSTER unsupported on YugabyteDB, no-op on DocDB storage: ALTER TABLE anon.country CLUSTER ON country_pkey;
 GRANT SELECT ON TABLE anon.country TO PUBLIC;
 GRANT SELECT ON SEQUENCE anon.country_oid_seq TO PUBLIC;
 
@@ -63,7 +63,7 @@ CREATE TABLE anon.email (
   val TEXT
 );
 
-ALTER TABLE anon.email CLUSTER ON email_pkey;
+-- YB(#1124): CLUSTER unsupported on YugabyteDB, no-op on DocDB storage: ALTER TABLE anon.email CLUSTER ON email_pkey;
 GRANT SELECT ON TABLE anon.email TO PUBLIC;
 GRANT SELECT ON SEQUENCE anon.email_oid_seq TO PUBLIC;
 
@@ -76,7 +76,7 @@ CREATE TABLE anon.first_name (
   val TEXT
 );
 
-ALTER TABLE anon.first_name CLUSTER ON first_name_pkey;
+-- YB(#1124): CLUSTER unsupported on YugabyteDB, no-op on DocDB storage: ALTER TABLE anon.first_name CLUSTER ON first_name_pkey;
 GRANT SELECT ON TABLE anon.first_name TO PUBLIC;
 GRANT SELECT ON SEQUENCE anon.first_name_oid_seq TO PUBLIC;
 
@@ -89,7 +89,7 @@ CREATE TABLE anon.iban (
   val TEXT
 );
 
-ALTER TABLE anon.iban CLUSTER ON iban_pkey;
+-- YB(#1124): CLUSTER unsupported on YugabyteDB, no-op on DocDB storage: ALTER TABLE anon.iban CLUSTER ON iban_pkey;
 GRANT SELECT ON TABLE anon.iban TO PUBLIC;
 GRANT SELECT ON SEQUENCE anon.iban_oid_seq TO PUBLIC;
 
@@ -102,7 +102,7 @@ CREATE TABLE anon.last_name (
   val TEXT
 );
 
-ALTER TABLE anon.last_name CLUSTER ON last_name_pkey;
+-- YB(#1124): CLUSTER unsupported on YugabyteDB, no-op on DocDB storage: ALTER TABLE anon.last_name CLUSTER ON last_name_pkey;
 GRANT SELECT ON TABLE anon.last_name TO PUBLIC;
 GRANT SELECT ON SEQUENCE anon.last_name_oid_seq TO PUBLIC;
 
@@ -115,7 +115,7 @@ CREATE TABLE anon.postcode (
   val TEXT
 );
 
-ALTER TABLE anon.postcode CLUSTER ON postcode_pkey;
+-- YB(#1124): CLUSTER unsupported on YugabyteDB, no-op on DocDB storage: ALTER TABLE anon.postcode CLUSTER ON postcode_pkey;
 GRANT SELECT ON TABLE anon.postcode TO PUBLIC;
 GRANT SELECT ON SEQUENCE anon.postcode_oid_seq TO PUBLIC;
 
@@ -128,7 +128,7 @@ CREATE TABLE anon.siret (
   val TEXT
 );
 
-ALTER TABLE anon.siret CLUSTER ON siret_pkey;
+-- YB(#1124): CLUSTER unsupported on YugabyteDB, no-op on DocDB storage: ALTER TABLE anon.siret CLUSTER ON siret_pkey;
 GRANT SELECT ON TABLE anon.siret TO PUBLIC;
 GRANT SELECT ON SEQUENCE anon.siret_oid_seq TO PUBLIC;
 
@@ -141,7 +141,7 @@ CREATE TABLE anon.lorem_ipsum (
   paragraph TEXT
 );
 
-ALTER TABLE anon.lorem_ipsum CLUSTER ON lorem_ipsum_pkey;
+-- YB(#1124): CLUSTER unsupported on YugabyteDB, no-op on DocDB storage: ALTER TABLE anon.lorem_ipsum CLUSTER ON lorem_ipsum_pkey;
 GRANT SELECT ON TABLE anon.lorem_ipsum TO PUBLIC;
 GRANT SELECT ON SEQUENCE anon.lorem_ipsum_oid_seq TO PUBLIC;
 
